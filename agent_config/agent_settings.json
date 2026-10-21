@@ -1,0 +1,77 @@
+{
+  "_notes": {
+    "language": "One agent per language: hi-IN for the Hindi agent, en-IN for the English one (set in create_agent.py). Retell's docs say a single-language agent hears more accurately than a mixed one, and the backend knows each borrower's language before it dials. Each agent can still switch language mid-call if the borrower does.",
+    "timezone": "Retell defaults to America/Los_Angeles. Must be Asia/Kolkata so time variables are in IST.",
+    "handbook_config": "New Retell agents get hidden handbook presets added to the prompt. All are off so the live agent runs exactly the prompt the test lab runs.",
+    "interruption_sensitivity": "Slightly below the default of 1 so short backchannels like 'haan' or 'hmm' on noisy lines do not cut Meera off.",
+    "max_call_duration_ms": "12 minutes, matching the pre-dial rule that no call starts after 18:45.",
+    "data_storage_retention_days": "At least six months, as RBI requires for recovery call recordings.",
+    "pii_config": "Scrubs card, bank account, password and PIN data from stored transcripts and recordings, for borrowers who read out a code unprompted.",
+    "voicemail_option": "Hang up without a message so nothing is disclosed to whoever hears the voicemail.",
+    "temperature": "Google strongly recommends the default 1.0 for all Gemini 3 models; lower values can hurt reasoning (ai.google.dev Gemini 3 developer guide). The lab's open model has its own setting, LAB_AGENT_TEMPERATURE.",
+    "voice": "Monika (en-IN), ElevenLabs, chosen by listening to previews. eleven_flash_v2_5 is fast and supports Hindi and English (Retell language support page).",
+    "voice_tuning": "After the v2 voice test (21 Oct 2026): faster speech (1.15), steadier voice (temperature 0.5) and accurate speech recognition, because the caller found the voice slow and breathy and Hinglish was misheard.",
+    "default_dynamic_variables": "Built by create_agent.py from a fictional borrower for each language (Sunil Verma for Hindi, Mohit Sethi for English), so a dashboard test call has every variable filled."
+  },
+  "llm": {
+    "start_speaker": "agent",
+    "begin_message": "{{opening_line}}",
+    "temperature": 1.0,
+    "tool_call_strict_mode": true
+  },
+  "agent": {
+    "agent_name": "Kaveri Finance collections reminder",
+    "timezone": "Asia/Kolkata",
+    "interruption_sensitivity": 0.8,
+    "responsiveness": 1.0,
+    "enable_backchannel": false,
+    "reminder_trigger_ms": 8000,
+    "reminder_max_count": 1,
+    "end_call_after_silence_ms": 30000,
+    "max_call_duration_ms": 720000,
+    "begin_message_delay_ms": 500,
+    "boosted_keywords": [
+      "EMI",
+      "UPI",
+      "Kaveri Finance",
+      "payment link"
+    ],
+    "voicemail_option": {
+      "action": {
+        "type": "hangup"
+      }
+    },
+    "data_storage_setting": "everything",
+    "data_storage_retention_days": 190,
+    "pii_config": {
+      "mode": "post_call",
+      "categories": [
+        "credit_card",
+        "bank_account",
+        "password",
+        "pin"
+      ]
+    },
+    "handbook_config": {
+      "default_personality": false,
+      "conversational_personality": false,
+      "natural_filler_words": false,
+      "high_empathy": false,
+      "echo_verification": false,
+      "nato_phonetic_alphabet": false,
+      "speech_normalization": false,
+      "smart_matching": false,
+      "ai_disclosure": false,
+      "scope_boundaries": false
+    },
+    "webhook_events": [
+      "call_started",
+      "call_ended",
+      "call_analyzed"
+    ],
+    "voice_model": "eleven_flash_v2_5",
+    "voice_speed": 1.15,
+    "voice_temperature": 0.5,
+    "stt_mode": "accurate"
+  }
+}

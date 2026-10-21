@@ -1,0 +1,53 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap");
+
+:root {
+  --accent: #2a78d6;
+  --text: #1f2328;
+  --text-muted: #52514e;
+  --line: #e6e5e1;
+  --surface: #ffffff;
+  --page: #f7f7f5;
+  --fail: #d03b3b;
+  --pass: #0b7a0b;
+}
+
+html, body, [class*="css"], .stMarkdown, .stDataFrame, button, input, select, textarea {
+  font-family: "IBM Plex Sans", Inter, system-ui, sans-serif;
+}
+
+h1 { font-size: 1.5rem !important; font-weight: 600 !important; letter-spacing: 0 !important; }
+h2 { font-size: 1.15rem !important; font-weight: 600 !important; }
+h3 { font-size: 1rem !important; font-weight: 600 !important; }
+
+.block-container { padding-top: 2rem; max-width: 1280px; }
+
+[data-testid="stMetric"] {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+[data-testid="stMetricLabel"] p { color: var(--text-muted); font-size: 0.8rem; }
+[data-testid="stMetricValue"] { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+
+.empty {
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  padding: 16px;
+  color: var(--text-muted);
+  background: var(--surface);
+}
+.empty code { font-size: 0.85rem; }
+
+.transcript { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 8px 12px; }
+.turn { display: grid; grid-template-columns: 84px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0efec; font-size: 0.92rem; }
+.turn:last-child { border-bottom: none; }
+.who { color: var(--text-muted); font-size: 0.8rem; padding-top: 2px; }
+.who.agent { color: var(--accent); font-weight: 500; }
+.tool { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--text-muted); word-break: break-word; }
+
+.tag { display: inline-block; font-size: 0.75rem; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--line); color: var(--text-muted); }
+.tag.fail { border-color: var(--fail); color: var(--fail); }
+.tag.pass { border-color: var(--pass); color: var(--pass); }

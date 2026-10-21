@@ -1,0 +1,89 @@
+[
+  {
+    "type": "enum",
+    "name": "outcome",
+    "description": "The single result of the call. If more than one applies, pick the first in this order: escalated_to_human (severe distress, request for a person, complaint or stop-calling request), hardship_escalated (job loss, illness, death or similar; collection stopped), dispute_logged (not their loan or wrong amount), paid_already (says they already paid), promise_to_pay (a date and amount agreed), payment_link_sent (link sent, no date agreed), callback_scheduled (callback booked), third_party_or_wrong_number (someone other than the borrower answered), identity_not_verified (could not confirm the borrower), refused_or_abusive (refused or abusive, call ended politely), call_incomplete (call dropped or audio failed before any result).",
+    "choices": [
+      "escalated_to_human",
+      "hardship_escalated",
+      "dispute_logged",
+      "paid_already",
+      "promise_to_pay",
+      "payment_link_sent",
+      "callback_scheduled",
+      "third_party_or_wrong_number",
+      "identity_not_verified",
+      "refused_or_abusive",
+      "call_incomplete"
+    ],
+    "required": true
+  },
+  {
+    "type": "boolean",
+    "name": "identity_verified",
+    "description": "True if the identity check passed during the call, false otherwise.",
+    "required": true
+  },
+  {
+    "type": "boolean",
+    "name": "third_party_answered",
+    "description": "True if at any point someone other than the borrower spoke on the call, such as a family member, colleague or a wrong number.",
+    "required": true
+  },
+  {
+    "type": "string",
+    "name": "ptp_date",
+    "description": "The promised payment date as YYYY-MM-DD, only if the borrower promised to pay by a date.",
+    "examples": ["2026-10-24"],
+    "required": false,
+    "conditional_prompt": "Only fill this if a promise to pay was agreed."
+  },
+  {
+    "type": "number",
+    "name": "ptp_amount",
+    "description": "The promised amount in rupees, only if the borrower promised to pay.",
+    "required": false,
+    "conditional_prompt": "Only fill this if a promise to pay was agreed."
+  },
+  {
+    "type": "boolean",
+    "name": "hardship_flag",
+    "description": "True if the borrower described a hardship such as job loss, illness, a medical emergency or a death in the family.",
+    "required": true
+  },
+  {
+    "type": "enum",
+    "name": "hardship_category",
+    "description": "The kind of hardship the borrower described. income_drop covers business loss or reduced pay.",
+    "choices": ["job_loss", "medical", "bereavement", "income_drop", "other"],
+    "required": false,
+    "conditional_prompt": "Only fill this if the borrower described a hardship."
+  },
+  {
+    "type": "boolean",
+    "name": "dispute_flag",
+    "description": "True if the borrower said they already paid, that the loan is not theirs, or that the amount is wrong.",
+    "required": true
+  },
+  {
+    "type": "enum",
+    "name": "language_used",
+    "description": "The main language the borrower spoke. hinglish means a real mix of Hindi and English in the same sentences.",
+    "choices": ["hindi", "english", "hinglish"],
+    "required": true
+  },
+  {
+    "type": "boolean",
+    "name": "escalated",
+    "description": "True if the case was handed to a person on the collections team, whether by transfer or a queued callback.",
+    "required": true
+  },
+  {
+    "type": "enum",
+    "name": "escalation_reason",
+    "description": "Why the case was handed to a person. plan_change_request covers waivers, discounts, settlements and dates more than seven days away.",
+    "choices": ["borrower_request", "severe_distress", "complaint", "stop_calling", "plan_change_request"],
+    "required": false,
+    "conditional_prompt": "Only fill this if the case was handed to a person."
+  }
+]

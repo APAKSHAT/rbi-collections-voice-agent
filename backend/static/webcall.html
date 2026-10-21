@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test call</title>
+<style>
+  :root { --bg: #f7f7f5; --text: #1f2328; --muted: #6b7075; --accent: #1f4e79; --line: #d9dadc; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 480px; margin: 64px auto; padding: 0 16px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  p { color: var(--muted); margin: 0 0 24px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; font: inherit; margin-bottom: 16px; }
+  button { padding: 8px 16px; border: 1px solid var(--accent); border-radius: 4px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #status { margin-top: 24px; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Test call</h1>
+  <p>Web call to the Kaveri Finance agent. Allowed hours are checked when you press Start.</p>
+  <label for="borrower">Borrower ID</label>
+  <input id="borrower" autocomplete="off">
+  <button id="start">Start</button>
+  <button id="stop" class="secondary" disabled>End</button>
+  <div id="status">Idle</div>
+</main>
+<script type="module">
+  import { RetellWebClient } from "https://cdn.jsdelivr.net/npm/retell-client-js-sdk@3.0.2/+esm";
+
+  const client = new RetellWebClient();
+  const $ = (id) => document.getElementById(id);
+  const setStatus = (text) => { $("status").textContent = text; };
+  $("borrower").value = new URLSearchParams(location.search).get("borrower_id") || "";
+
+  client.on("call_started", () => { setStatus("Live"); $("stop").disabled = false; });
+  client.on("call_ended", () => { setStatus("Ended"); $("start").disabled = false; $("stop").disabled = true; });
+  client.on("error", (e) => { setStatus("Error: " + e); client.stopCall(); });
+
+  $("start").onclick = async () => {
+    $("start").disabled = true;
+    setStatus("Checking policy");
+    const res = await fetch("/webcall/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ borrower_id: $("borrower").value.trim() }),
+    });
+    const data = await res.json();
+    if (!data.ok) { setStatus("Refused: " + data.message); $("start").disabled = false; return; }
+    setStatus("Connecting, call " + data.call_id);
+    await client.startCall({ accessToken: data.access_token });
+  };
+  $("stop").onclick = () => client.stopCall();
+</script>
+</body>
+</html>

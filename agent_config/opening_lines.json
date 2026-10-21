@@ -1,0 +1,5 @@
+{
+  "_note": "The first line is fixed text, not generated, so the recording notice is in the first turn of every call. Hindi is in Devanagari so the voice pronounces it correctly. The backend fills it in and passes it as the opening_line dynamic variable.",
+  "hi": "नमस्ते, मैं मीरा, {lender_name} की virtual assistant बोल रही हूँ। यह call रिकॉर्ड हो रही है। क्या मेरी बात {borrower_name} जी से हो रही है?",
+  "en": "Hello, this is Meera, a virtual assistant calling from {lender_name}. This call is being recorded. Am I speaking with {borrower_name}?"
+}

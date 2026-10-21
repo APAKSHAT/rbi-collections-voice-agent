@@ -1,0 +1,11 @@
+retell-sdk==6.2.9
+python-dotenv==1.1.1
+pytest==8.4.2
+fastapi==0.118.0
+uvicorn==0.37.0
+httpx==0.28.1
+openai==3.26.0
+pyyaml==6.0.2
+streamlit==1.65.0
+plotly==7.1.0
+pandas==3.0.6

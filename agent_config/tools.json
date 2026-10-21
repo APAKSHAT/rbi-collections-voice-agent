@@ -1,0 +1,274 @@
+[
+  {
+    "type": "custom",
+    "name": "verify_identity",
+    "description": "Checks one identity answer from the person on the call against the lender's record. Returns verified (true or false) and attempts_left. It never returns the correct answer.",
+    "url": "${BACKEND_URL}/tools/verify_identity",
+    "method": "POST",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "answer_type": {
+          "type": "string",
+          "enum": [
+            "birth_year",
+            "registered_city"
+          ],
+          "description": "Which question the person answered."
+        },
+        "answer": {
+          "type": "string",
+          "description": "The answer as said. For birth_year, four digits such as 1991. For registered_city, the city name such as Nagpur."
+        },
+        "borrower_id": {
+          "type": "string",
+          "const": "{{borrower_id}}"
+        }
+      },
+      "required": [
+        "answer_type",
+        "answer"
+      ]
+    },
+    "speak_during_execution": true,
+    "execution_message_type": "prompt",
+    "execution_message_description": "A very short line in the borrower's current language, such as 'Ek second.' or 'One moment.'",
+    "speak_after_execution": true,
+    "timeout_ms": 8000
+  },
+  {
+    "type": "custom",
+    "name": "send_payment_link",
+    "description": "Sends the official payment link for the overdue EMI to the borrower's registered mobile number. Works only after identity is verified. Returns response_text to tell the borrower.",
+    "url": "${BACKEND_URL}/tools/send_payment_link",
+    "method": "POST",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "enum": [
+            "sms",
+            "whatsapp"
+          ],
+          "description": "Use sms unless the borrower asks for WhatsApp."
+        },
+        "borrower_id": {
+          "type": "string",
+          "const": "{{borrower_id}}"
+        }
+      },
+      "required": [
+        "channel"
+      ]
+    },
+    "speak_during_execution": true,
+    "execution_message_type": "prompt",
+    "execution_message_description": "A very short line in the borrower's current language, such as 'Main link bhej rahi hoon.' or 'Sending the link now.'",
+    "speak_after_execution": true,
+    "timeout_ms": 8000
+  },
+  {
+    "type": "custom",
+    "name": "log_promise_to_pay",
+    "description": "Records the borrower's promise to pay. Accepts a date within the next seven days and an amount above zero and not more than the total outstanding. Returns accepted, or a reason it was rejected.",
+    "url": "${BACKEND_URL}/tools/log_promise_to_pay",
+    "method": "POST",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date_iso": {
+          "type": "string",
+          "description": "The promised payment date as YYYY-MM-DD, for example 2026-10-24."
+        },
+        "amount_inr": {
+          "type": "number",
+          "description": "The promised amount in rupees, digits only, for example 4500."
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "payment_link",
+            "branch",
+            "other"
+          ],
+          "description": "How the borrower plans to pay. Use payment_link if they will pay online or by UPI."
+        },
+        "borrower_id": {
+          "type": "string",
+          "const": "{{borrower_id}}"
+        }
+      },
+      "required": [
+        "date_iso",
+        "amount_inr",
+        "mode"
+      ]
+    },
+    "speak_during_execution": true,
+    "execution_message_type": "prompt",
+    "execution_message_description": "A very short line in the borrower's current language, such as 'Main note kar leti hoon.' or 'Let me note that.'",
+    "speak_after_execution": true,
+    "timeout_ms": 8000
+  },
+  {
+    "type": "custom",
+    "name": "flag_hardship",
+    "description": "Records that the borrower is facing a hardship and queues a call from a person on the collections team who can discuss options. Pauses automated calls for medical and bereavement cases.",
+    "url": "${BACKEND_URL}/tools/flag_hardship",
+    "method": "POST",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "job_loss",
+            "medical",
+            "bereavement",
+            "income_drop",
+            "other"
+          ],
+          "description": "The kind of hardship. income_drop covers business loss or reduced pay."
+        },
+        "note": {
+          "type": "string",
+          "description": "One or two plain English sentences on what the borrower said."
+        },
+        "borrower_id": {
+          "type": "string",
+          "const": "{{borrower_id}}"
+        }
+      },
+      "required": [
+        "category",
+        "note"
+      ]
+    },
+    "speak_during_execution": false,
+    "speak_after_execution": true,
+    "timeout_ms": 8000
+  },
+  {
+    "type": "custom",
+    "name": "log_dispute",
+    "description": "Records that the borrower disputes the dues or says they already paid, and sends it to a person for checking.",
+    "url": "${BACKEND_URL}/tools/log_dispute",
+    "method": "POST",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "already_paid",
+            "not_my_loan",
+            "wrong_amount",
+            "other"
+          ],
+          "description": "The kind of dispute."
+        },
+        "note": {
+          "type": "string",
+          "description": "Plain English details. For already_paid, include the payment date, how they paid and any reference number they gave."
+        },
+        "borrower_id": {
+          "type": "string",
+          "const": "{{borrower_id}}"
+        }
+      },
+      "required": [
+        "category",
+        "note"
+      ]
+    },
+    "speak_during_execution": false,
+    "speak_after_execution": true,
+    "timeout_ms": 8000
+  },
+  {
+    "type": "custom",
+    "name": "schedule_callback",
+    "description": "Books a callback. Accepts times between 08:00 and 18:45 India time within the next seven days. Returns accepted, or a reason and the nearest allowed time.",
+    "url": "${BACKEND_URL}/tools/schedule_callback",
+    "method": "POST",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "datetime_iso": {
+          "type": "string",
+          "description": "The callback time in India time as YYYY-MM-DDTHH:MM, for example 2026-10-22T17:30."
+        },
+        "borrower_id": {
+          "type": "string",
+          "const": "{{borrower_id}}"
+        }
+      },
+      "required": [
+        "datetime_iso"
+      ]
+    },
+    "speak_during_execution": false,
+    "speak_after_execution": true,
+    "timeout_ms": 8000
+  },
+  {
+    "type": "custom",
+    "name": "escalate_to_human",
+    "description": "Hands the case to a person on the collections team. Always works. Returns queued and live_transfer_available, which says whether the call can be transferred right now.",
+    "url": "${BACKEND_URL}/tools/escalate_to_human",
+    "method": "POST",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "enum": [
+            "borrower_request",
+            "severe_distress",
+            "complaint",
+            "stop_calling",
+            "plan_change_request"
+          ],
+          "description": "Why the case needs a person. plan_change_request covers waivers, discounts, settlements and dates more than seven days away."
+        },
+        "note": {
+          "type": "string",
+          "description": "One plain English sentence of context for the person who picks this up."
+        },
+        "borrower_id": {
+          "type": "string",
+          "const": "{{borrower_id}}"
+        }
+      },
+      "required": [
+        "reason",
+        "note"
+      ]
+    },
+    "speak_during_execution": false,
+    "speak_after_execution": true,
+    "timeout_ms": 8000
+  },
+  {
+    "type": "transfer_call",
+    "name": "transfer_call",
+    "description": "Transfers a live phone call to the collections desk. Use only after escalate_to_human returned live_transfer_available as true.",
+    "transfer_destination": {
+      "type": "predefined",
+      "number": "{{human_desk_number}}"
+    },
+    "transfer_option": {
+      "type": "cold_transfer",
+      "cold_transfer_mode": "sip_invite"
+    },
+    "speak_during_execution": true,
+    "execution_message_type": "prompt",
+    "execution_message_description": "One short line in the borrower's current language saying you are connecting them to a person now."
+  },
+  {
+    "type": "end_call",
+    "name": "end_call",
+    "description": "Ends the call. Use after your closing line, when the borrower says goodbye, after handling a third person or wrong number, when identity could not be verified, or when abuse continues after one request to stop."
+  }
+]

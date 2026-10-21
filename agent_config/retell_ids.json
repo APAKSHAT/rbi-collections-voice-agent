@@ -1,0 +1,12 @@
+{
+  "hi": {
+    "llm_id": "llm_1b05b122571b4149f5859bc214a3",
+    "agent_id": "agent_e8ac67961b5a5a1192e677718a",
+    "prompt_version": "v4"
+  },
+  "en": {
+    "llm_id": "llm_39217cc546506a0bc9849a434740",
+    "agent_id": "agent_ab820d393c4072bad5f934c1ad",
+    "prompt_version": "v4"
+  }
+}

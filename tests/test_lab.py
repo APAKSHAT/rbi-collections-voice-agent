@@ -432,3 +432,52 @@ def test_before_after_uses_only_shared_personas() -> None:
     compare, n = same_persona_comparison(rt)
     assert n == 2 and list(compare["version"]) == ["v1", "v4"]
     assert list(compare["persona_pass"]) == [0.5, 1.0]  # persona "c" (v4 only) is left out
+
+
+class TestRateLimiter:
+    def _error(self, message: str):
+        import httpx
+        import openai
+
+        response = httpx.Response(429, request=httpx.Request("POST", "https://api.example/v1"))
+        return openai.RateLimitError(message, response=response, body=None)
+
+    def test_per_minute_limit_is_waited_out(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import lab.llm as L
+
+        sleeps: list[float] = []
+        monkeypatch.setattr(L.time, "sleep", sleeps.append)
+        attempts = iter([self._error("Rate limit reached on input tokens per minute (ITPM). Please try again in 9.5s."), "ok"])
+
+        def fn():
+            item = next(attempts)
+            if isinstance(item, Exception):
+                raise item
+            return item
+
+        assert L.RateLimiter(600).call(fn) == "ok"
+        assert 10.5 in sleeps  # waited the suggested 9.5 s plus a second
+
+    def test_daily_limit_stops_the_run(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import lab.llm as L
+
+        monkeypatch.setattr(L.time, "sleep", lambda s: None)
+        error = self._error("Rate limit reached on tokens per day (TPD).")
+
+        def fn():
+            raise error
+
+        with pytest.raises(L.QuotaExhausted):
+            L.RateLimiter(600).call(fn)
+
+    def test_waits_when_the_token_window_is_full(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import lab.llm as L
+
+        clock = [1000.0]
+        monkeypatch.setattr(L.time, "monotonic", lambda: clock[0])
+        monkeypatch.setattr(L.time, "sleep", lambda s: clock.__setitem__(0, clock[0] + s))
+        limiter = L.RateLimiter(600, tpm=7000)
+        limiter.record(5000)
+        start = clock[0]
+        limiter.call(lambda: "ok", estimate=3000)  # 5000 + 3000 > 7000, so it waits for the window to clear
+        assert clock[0] - start >= 59

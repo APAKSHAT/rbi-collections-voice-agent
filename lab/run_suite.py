@@ -93,6 +93,7 @@ def run_one(
 ) -> None:
     run_id = f"{suite_id}:{persona['id']}:s{seed}"
     now = datetime.now(IST)
+    print(f"  {persona['id']} s{seed}: started {now.strftime('%H:%M')}", flush=True)
     try:
         result = simulate(persona, prompt_text, models.agent_factory(), models.borrower, run_id, sim_time, max_turns)
     except QuotaExhausted:

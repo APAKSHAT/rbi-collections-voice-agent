@@ -58,30 +58,70 @@ class TextModel(Protocol):
 
 
 class QuotaExhausted(RuntimeError):
-    """Raised when the API keeps returning 429 after retries, usually a daily free-tier cap."""
+    """Raised when a daily free-tier limit is hit. The suite stops and resumes on the next run."""
 
 
 class RateLimiter:
-    """Spaces requests to stay under a requests-per-minute limit. The SDK retries 429s itself."""
+    """Keeps one model's requests under its per-minute limits.
 
-    def __init__(self, rpm: int) -> None:
+    Free tiers cap both requests and input tokens per minute (Groq: 7,000 input
+    tokens a minute for the agent model). One agent turn sends 3,000 to 6,000
+    tokens, so counting requests alone is not enough: before each request the
+    limiter waits until the last minute's input tokens plus this request's
+    estimate fit under the cap. A per-minute 429 is waited out and retried;
+    only a daily limit raises QuotaExhausted.
+    """
+
+    MAX_MINUTE_RETRIES = 8
+
+    def __init__(self, rpm: int, tpm: int = 0) -> None:
         self.interval = 60.0 / max(rpm, 1)
+        self.tpm = tpm
         self._lock = threading.Lock()
         self._next = 0.0
+        self._window: list[tuple[float, int]] = []  # (time, input tokens) over the last minute
 
-    def call(self, fn: Callable[[], Any]) -> Any:
+    def _wait_for_tokens(self, estimate: int) -> None:
+        if not self.tpm:
+            return
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                self._window = [(t, n) for t, n in self._window if now - t < 60]
+                used = sum(n for _, n in self._window)
+                if used + estimate <= self.tpm or not self._window:
+                    return
+                wait = 60 - (now - self._window[0][0]) + 0.5
+            time.sleep(max(wait, 0.5))
+
+    def record(self, tokens: int) -> None:
+        with self._lock:
+            self._window.append((time.monotonic(), tokens))
+
+    def call(self, fn: Callable[[], Any], estimate: int = 0) -> Any:
         import openai
 
-        with self._lock:
-            now = time.monotonic()
-            wait = self._next - now
-            self._next = max(now, self._next) + self.interval
-        if wait > 0:
-            time.sleep(wait)
-        try:
-            return fn()
-        except openai.RateLimitError as e:
-            raise QuotaExhausted(str(e)) from e
+        for attempt in range(self.MAX_MINUTE_RETRIES + 1):
+            self._wait_for_tokens(estimate)
+            with self._lock:
+                now = time.monotonic()
+                wait = self._next - now
+                self._next = max(now, self._next) + self.interval
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                resp = fn()
+            except openai.RateLimitError as e:
+                message = str(e).lower()
+                if "per day" in message or attempt == self.MAX_MINUTE_RETRIES:
+                    raise QuotaExhausted(str(e)) from e
+                found = re.search(r"try again in ([\d.]+)s", message)
+                time.sleep(float(found.group(1)) + 1 if found else 15)
+                continue
+            usage = getattr(resp, "usage", None)
+            self.record(getattr(usage, "prompt_tokens", 0) or estimate)
+            return resp
+        raise AssertionError("unreachable")
 
 
 _THINK = re.compile(r"<think>.*?</think>", re.S)
@@ -95,13 +135,19 @@ def _clean(text: str | None) -> str:
 # OpenAI-compatible implementation
 
 
+def _estimate_tokens(*parts: Any) -> int:
+    """Rough input size for the per-minute budget. Devanagari costs more tokens per character, so err high."""
+    return int(len(json.dumps(parts, ensure_ascii=False)) / 2.5) + 50
+
+
 def _client() -> Any:
     from openai import OpenAI
 
     key = os.environ.get("LLM_API_KEY")
     if not key:
         raise RuntimeError("LLM_API_KEY is not set. Get a free key at console.groq.com/keys and add it to .env.")
-    return OpenAI(api_key=key, base_url=os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL), max_retries=6)
+    # Short timeout so a stalled request is retried instead of hanging for ten minutes.
+    return OpenAI(api_key=key, base_url=os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL), max_retries=2, timeout=60)
 
 
 def _functions(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -135,7 +181,8 @@ class ChatAgent:
         resp = self.limiter.call(
             lambda: self.client.chat.completions.create(
                 model=self.name, messages=self.messages, tools=self.tools, tool_choice="auto", temperature=self.temperature
-            )
+            ),
+            estimate=_estimate_tokens(self.messages, self.tools),
         )
         msg = resp.choices[0].message
         calls: list[ToolCall] = []
@@ -167,7 +214,8 @@ class ChatText:
         messages = [{"role": "system", "content": system}]
         messages += [{"role": "assistant" if r == "model" else "user", "content": t} for r, t in turns]
         resp = self.limiter.call(
-            lambda: self.client.chat.completions.create(model=self.name, messages=messages, temperature=self.temperature)
+            lambda: self.client.chat.completions.create(model=self.name, messages=messages, temperature=self.temperature),
+            estimate=_estimate_tokens(messages),
         )
         return _clean(resp.choices[0].message.content)
 
@@ -180,7 +228,8 @@ class ChatText:
                 messages=[{"role": "system", "content": instruction}, {"role": "user", "content": prompt}],
                 temperature=self.temperature,
                 response_format={"type": "json_object"},
-            )
+            ),
+            estimate=_estimate_tokens([instruction, prompt]),
         )
         try:
             return json.loads(_clean(resp.choices[0].message.content))
@@ -206,9 +255,12 @@ def env_models() -> dict[str, str]:
 def chat_models(agent_temperature: float) -> Models:
     client = _client()
     names = env_models()
-    agent_limiter = RateLimiter(int(os.environ.get("AGENT_RPM", "20")))
-    sim = ChatText(client, names["sim"], 0.9, RateLimiter(int(os.environ.get("SIM_RPM", "25"))))
-    judge = ChatText(client, names["judge"], 0.0, RateLimiter(int(os.environ.get("JUDGE_RPM", "20"))))
+    def limiter(role: str, rpm: str) -> RateLimiter:
+        return RateLimiter(int(os.environ.get(f"{role}_RPM", rpm)), int(os.environ.get(f"{role}_ITPM", "6500")))
+
+    agent_limiter = limiter("AGENT", "20")
+    sim = ChatText(client, names["sim"], 0.9, limiter("SIM", "25"))
+    judge = ChatText(client, names["judge"], 0.0, limiter("JUDGE", "20"))
     return Models(
         agent_factory=lambda: ChatAgent(client, names["agent"], agent_temperature, agent_limiter),
         borrower=sim,

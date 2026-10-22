@@ -14,7 +14,9 @@ Quarterly review, prepared for the Kaveri Finance collections head and complianc
 The table below is generated from the test database. See [results.md](results.md) for the full breakdown.
 
 <!-- results:start -->
-No suite results yet. They appear here after the first run.
+| Version | Calls | Persona pass | Compliance | Correct outcome | Promise to pay | Hardship flagged | Escalated |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| v1 | 7 | 43% | 71% | 43% | 14% | 14% | 14% |
 
 Full breakdown: [results.md](results.md).
 <!-- results:end -->

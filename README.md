@@ -2,6 +2,8 @@
 
 A Hindi and English voice agent that makes early-stage loan reminder calls for a fictional Indian NBFC, plus a lab that stress-tests it against 48 simulated borrowers before any change goes live.
 
+**Demo:** [watch a live Hindi call (2 min)](https://www.loom.com/share/ee68200e140944bbab6717884da2c591)
+
 All lenders, borrowers, numbers and accounts in this project are fictional.
 
 ## Why it exists
@@ -47,7 +49,9 @@ Requests from Retell are verified with its HMAC signature before anything runs.
 ## Results
 
 <!-- results:start -->
-No suite results yet. They appear here after the first run.
+| Version | Calls | Persona pass | Compliance | Correct outcome | Promise to pay | Hardship flagged | Escalated |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| v1 | 7 | 43% | 71% | 43% | 14% | 14% | 14% |
 
 Full breakdown: [results.md](docs/results.md).
 <!-- results:end -->
@@ -129,4 +133,4 @@ Expose it with ngrok and put the https URL in `BACKEND_URL`.
 
 ## Demo video
 
-To be recorded after the first voice test calls.
+[Two-minute demo on Loom](https://www.loom.com/share/ee68200e140944bbab6717884da2c591): a live Hindi call with the recording notice, the birth-year read-back and a promise to pay, then the RBI rules and the test dashboard.
